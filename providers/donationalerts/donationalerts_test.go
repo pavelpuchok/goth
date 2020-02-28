@@ -97,6 +97,23 @@ func TestProvider_FetchUser(t *testing.T) {
 	a.Equal(user.ExpiresAt, s.ExpiresAt)
 }
 
+func TestProvider_FetchUserOnUnauthorized(t *testing.T) {
+	t.Parallel()
+	a := assert.New(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"message":"unauthorized"}`))
+	}))
+	defer ts.Close()
+
+	p := provider()
+	p.ProfileEndpoint = ts.URL
+	s := &Session{}
+	_, err := p.FetchUser(s)
+	a.Error(err)
+}
+
 const testProfileResponseData = `{
     "data": {
         "id": 3,

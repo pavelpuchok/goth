@@ -3,6 +3,7 @@ package donationalerts
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/markbates/goth"
 	"golang.org/x/oauth2"
 	"io/ioutil"
@@ -83,6 +84,10 @@ func (p *Provider) UnmarshalSession(data string) (goth.Session, error) {
 func (p *Provider) FetchUser(session goth.Session) (goth.User, error) {
 	s := session.(*Session)
 
+	if s.AccessToken == "" {
+		return goth.User{}, fmt.Errorf("%s cannot get user information without accessToken", p.providerName)
+	}
+
 	bits, err := p.fetchUserData(s.AccessToken)
 
 	if err != nil {
@@ -113,8 +118,11 @@ func (p *Provider) fetchUserData(accessToken string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-
 	defer r.Body.Close()
+
+	if r.StatusCode != http.StatusOK {
+		return []byte{}, fmt.Errorf("%s responded with a %d trying to fetch user information", p.providerName, r.StatusCode)
+	}
 
 	bits, err := ioutil.ReadAll(r.Body)
 	return bits, err
